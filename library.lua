@@ -2,10 +2,9 @@ if getgenv().CustomUILibraryLoaded then return getgenv().CustomUILibraryLoaded e
 
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local HttpService      = game:GetService("HttpService")
-local GuiParent        = (gethui and gethui()) or game:GetService("CoreGui")
 
-local SessionTag = "UI_" .. HttpService:GenerateGUID(false):sub(1,8)
+-- Generate a safe pseudo-random session tag without using HttpService API calls
+local SessionTag = "UI_" .. string.format("%07x", math.random(0, 0xFFFFFFF))
 
 local CFG = {
     PanelW = 840,
@@ -103,7 +102,7 @@ function Library.CreateWindow(titleText)
         IgnoreGuiInset = true,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         Name = SessionTag .. "_GUI",
-        Parent = GuiParent,
+        Parent = (gethui and gethui()) or game:GetService("CoreGui"),
     })
 
     local Panel = U.New("Frame", {
@@ -186,14 +185,16 @@ function Library.CreateWindow(titleText)
         Parent = Panel,
     })
 
-    local EditorTabs = U.New("Frame", {BackgroundColor3=CFG.C_PANEL2, Size=UDim2.new(1,0,0,34), Parent=Main})
+    -- Enhanced Modern Editor Tab System Layout
+    local EditorTabs = U.New("Frame", {BackgroundColor3=Color3.fromRGB(30, 30, 30), Size=UDim2.new(1,0,0,38), Parent=Main})
     U.New("Frame", {BackgroundColor3=CFG.C_BORDER_SOFT, BorderSizePixel=0, Position=UDim2.new(0,0,1,-1), Size=UDim2.new(1,0,0,1), Parent=EditorTabs})
-    local EditorTabRow = U.New("Frame", {BackgroundTransparency=1, Position=UDim2.new(0,8,0,4), Size=UDim2.new(1,-16,1,-8), Parent=EditorTabs})
-    U.List(EditorTabRow, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center, 6)
+    
+    local EditorTabRow = U.New("Frame", {BackgroundTransparency=1, Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0), Parent=EditorTabs})
+    U.List(EditorTabRow, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Bottom, 1)
 
-    local Content = U.New("Frame", {BackgroundTransparency=1, Position=UDim2.new(0,0,0,34), Size=UDim2.new(1,0,1,-34), Parent=Main})
+    local Content = U.New("Frame", {BackgroundTransparency=1, Position=UDim2.new(0,0,0,38), Size=UDim2.new(1,0,1,-38), Parent=Main})
 
-    -- Minimized Icon Layout Setup
+    -- Minimized Layout Fallback Handling
     local MinimizedIcon = U.New("ImageButton", {
         BackgroundColor3 = CFG.C_PANEL2,
         Visible = false,
@@ -252,42 +253,71 @@ function Library.CreateWindow(titleText)
         if inp.KeyCode == Enum.KeyCode.K then SetHUDVisible(not Window.HUDOpen) end
     end)
 
-    -- Tab Selection Visual Synchronization Routine
     local function UpdateNavigation()
         for _, tab in ipairs(Window.Tabs) do
             local isCurrent = (Window.CurrentTab == tab)
             tab.PageFrame.Visible = isCurrent
             
-            U.Tween(tab.NavButton, 0.15, {
-                BackgroundColor3 = isCurrent and Color3.fromRGB(26,39,59) or CFG.C_PANEL3,
+            -- Sidebar button updates
+            U.Tween(tab.NavButton, 0.12, {
+                BackgroundColor3 = isCurrent and Color3.fromRGB(45, 45, 48) or Color3.fromRGB(37,37,38),
                 TextColor3 = isCurrent and CFG.C_ACCENT or CFG.C_TEXT,
             })
-            U.Tween(tab.TopFile, 0.15, {
-                BackgroundColor3 = isCurrent and Color3.fromRGB(26,39,59) or CFG.C_PANEL3,
+            
+            -- Modern top tab environment context state updates
+            U.Tween(tab.TopFile, 0.12, {
+                BackgroundColor3 = isCurrent and CFG.C_PANEL or Color3.fromRGB(45, 45, 48)
             })
+            U.Tween(tab.TopActiveIndicator, 0.12, {
+                BackgroundTransparency = isCurrent and 0 or 1
+            })
+            tab.TopTextLabel.TextColor3 = isCurrent and CFG.C_TEXT or CFG.C_MUTED
         end
     end
 
-    -- Create Tab Method
     function Window:CreateTab(tabName)
-        local Tab = {
-            Controls = {}
-        }
+        local Tab = { Controls = {} }
 
         -- Sidebar Navigation Button
         Tab.NavButton = U.Button({
-            Text = "›  " .. tabName,
-            Size = UDim2.new(1,0,0,30),
-            BackgroundColor3 = CFG.C_PANEL3,
+            Text = "  " .. tabName,
+            Size = UDim2.new(1,0,0,32),
+            BackgroundColor3 = Color3.fromRGB(37,37,38),
             TextXAlignment = Enum.TextXAlignment.Left,
             Parent = SideWrap,
         })
-        U.Pad(Tab.NavButton, 0, 0, 0, 12)
+        U.Stroke(Tab.NavButton, Color3.fromRGB(50, 50, 52), 1)
+        U.Pad(Tab.NavButton, 0, 0, 0, 8)
 
-        -- Top File Visual Layout Node
-        Tab.TopFile = U.New("Frame", {BackgroundColor3=CFG.C_PANEL3, Size=UDim2.fromOffset(130,22), Parent=EditorTabRow})
-        U.Stroke(Tab.TopFile, CFG.C_BORDER_SOFT, 1)
-        U.Label({Text=tabName:lower()..".cfg", Font=Enum.Font.Code, TextSize=11, TextXAlignment=Enum.TextXAlignment.Center, Size=UDim2.new(1,0,1,0), AutomaticSize=Enum.AutomaticSize.None, Parent=Tab.TopFile})
+        -- Modern Tab Environment Component (VS-Code Layout Style)
+        Tab.TopFile = U.New("TextButton", {
+            BackgroundColor3 = Color3.fromRGB(45,45,48), 
+            Size = UDim2.fromOffset(140, 34), 
+            Text = "",
+            AutoButtonColor = false,
+            Parent = EditorTabRow
+        })
+        U.New("Frame", {BackgroundColor3 = CFG.C_BORDER_SOFT, Size = UDim2.new(0,1,1,0), Position = UDim2.new(1,-1,0,0), BorderSizePixel = 0, Parent = Tab.TopFile})
+        
+        Tab.TopActiveIndicator = U.New("Frame", {
+            BackgroundColor3 = CFG.C_ACCENT,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0,0,0,0),
+            Size = UDim2.new(1,0,0,2),
+            BackgroundTransparency = 1,
+            Parent = Tab.TopFile
+        })
+
+        Tab.TopTextLabel = U.Label({
+            Text = tabName:lower() .. ".lua", 
+            Font = Enum.Font.Code, 
+            TextSize = 12, 
+            TextColor3 = CFG.C_MUTED,
+            TextXAlignment = Enum.TextXAlignment.Center, 
+            Size = UDim2.new(1,0,1,0), 
+            AutomaticSize = Enum.AutomaticSize.None, 
+            Parent = Tab.TopFile
+        })
 
         -- Page Workspace Canvas View
         Tab.PageFrame = U.New("ScrollingFrame", {
@@ -304,11 +334,45 @@ function Library.CreateWindow(titleText)
         U.List(Tab.PageFrame, Enum.FillDirection.Vertical, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top, 8)
         U.Pad(Tab.PageFrame, 12, 14, 12, 12)
 
-        -- Page Switch Bindings
-        Tab.NavButton.MouseButton1Click:Connect(function()
+        -- Bindings for Tab Environment Transitions
+        local function selectThisTab()
             Window.CurrentTab = Tab
             UpdateNavigation()
-        end)
+        end
+        Tab.NavButton.MouseButton1Click:Connect(selectThisTab)
+        Tab.TopFile.MouseButton1Click:Connect(selectThisTab)
+
+        -- Standard Trigger Actions Button Module
+        function Tab:CreateButton(title, description, callback)
+            local box = U.New("Frame", {BackgroundColor3=CFG.C_PANEL2, Size=UDim2.new(1,0,0,54), Parent=Tab.PageFrame})
+            U.Stroke(box, CFG.C_BORDER_SOFT, 1)
+
+            U.Label({Text=title, Font=Enum.Font.Code, TextSize=13, Position=UDim2.new(0,14,0,10), Size=UDim2.new(0.65,0,0,16), AutomaticSize=Enum.AutomaticSize.None, Parent=box})
+            U.Label({Text=description or "Execute and run generic target functional actions", Font=Enum.Font.Code, TextSize=10, TextColor3=CFG.C_MUTED, Position=UDim2.fromOffset(14, 28), Size=UDim2.new(0.65,0,0,14), AutomaticSize=Enum.AutomaticSize.None, Parent=box})
+
+            local triggerBtn = U.Button({
+                Text = "Run Action",
+                Font = Enum.Font.Code,
+                TextSize = 11,
+                BackgroundColor3 = CFG.C_PANEL3,
+                Position = UDim2.new(1,-114,0.5,-13),
+                Size = UDim2.fromOffset(100,26),
+                Parent = box
+            })
+            U.Stroke(triggerBtn, CFG.C_BORDER, 1)
+
+            triggerBtn.MouseButton1Down:Connect(function()
+                U.Tween(triggerBtn, 0.08, {BackgroundColor3 = CFG.C_BORDER_SOFT})
+            end)
+            triggerBtn.MouseButton1Up:Connect(function()
+                U.Tween(triggerBtn, 0.1, {BackgroundColor3 = CFG.C_PANEL3})
+            end)
+            triggerBtn.MouseButton1Click:Connect(function()
+                if callback then pcall(callback) end
+            end)
+
+            return box
+        end
 
         -- Create Toggle Functionality component
         function Tab:CreateToggle(title, initial, callback)
@@ -374,14 +438,12 @@ function Library.CreateWindow(titleText)
                 end
             end)
 
-            -- Initialize initial value layout state positioning percentages
             local initPercent = (value - min) / (max - min)
             fill.Size = UDim2.fromScale(initPercent, 1)
 
             return box
         end
 
-        -- Auto-select first initialization entry target dynamically
         if #Window.Tabs == 0 then
             Window.CurrentTab = Tab
             Tab.PageFrame.Visible = true
